@@ -289,14 +289,6 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
                 progress.skip_clip(i)
             else:
                 progress.start_clip(i, clip_seed)
-                if matched:
-                    # The previous clip's last frame drifts in color; pull its hue and saturation back toward the reference.
-                    first_file = os.path.join(cache_dir, f"{key}_first.png")
-                    save_png(match_chroma(first, reference, matched), first_file)
-                if worker is None:
-                    progress.update("load model", 0, 1)
-                    worker = get_worker(str(model_path(model_dir)))
-                    progress.update("load model", 1, 1)
                 # Written under temporary names and moved into place only once h3.c succeeded.
                 partial_video = os.path.join(cache_dir, f"{key}.partial.mp4")
                 partial_last = os.path.join(cache_dir, f"{key}_last.partial.png")
@@ -306,6 +298,14 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
                     return comfy.model_management.processing_interrupted()
 
                 try:
+                    if matched:
+                        # The previous clip's last frame drifts in color; pull its hue and saturation back toward the reference.
+                        first_file = os.path.join(cache_dir, f"{key}_first.png")
+                        save_png(match_chroma(first, reference, matched), first_file)
+                    if worker is None:
+                        progress.update("load model", 0, 1)
+                        worker = get_worker(str(model_path(model_dir)))
+                        progress.update("load model", 1, 1)
                     result = worker.generate({
                         "prompt": prompt, "width": width, "height": height, "frames": length, "seed": clip_seed,
                         "first_frame": first_file, "last_frame": reference_file if target else None,

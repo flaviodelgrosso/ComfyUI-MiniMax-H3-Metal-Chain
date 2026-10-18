@@ -50,7 +50,7 @@ Restart ComfyUI. The node appears as **MiniMax H3 Chain Video (h3.c)** in the `v
 
 ## Quick start
 
-1. Open `example_workflows/minimax_h3_chain.json`: drag it onto the canvas, or find it under **Templates** in the custom node examples.
+1. Open `workflows/minimax_h3_chain.json`: drag it onto the canvas, or find it under **Templates** in the custom node examples.
 2. Pick a start image in **Start image** (or remove it for text-to-video) and the size in **Resolution Selector**.
 3. Write one prompt per clip in the **Clip N** text nodes. To add a clip, connect another text node to the next free `prompt_N` slot.
 4. Press **Run**.

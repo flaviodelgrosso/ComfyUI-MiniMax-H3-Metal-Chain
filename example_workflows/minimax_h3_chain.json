@@ -1,0 +1,546 @@
+{
+  "id": "a45f75b8-d475-4582-90bd-060396248f1d",
+  "revision": 0,
+  "last_node_id": 21,
+  "last_link_id": 21,
+  "nodes": [
+    {
+      "id": 6,
+      "type": "LoadImage",
+      "pos": [
+        0,
+        0
+      ],
+      "size": [
+        420,
+        500
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "title": "Start image",
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "example.png",
+        "image"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 7,
+      "type": "ResolutionSelector",
+      "pos": [
+        0,
+        560
+      ],
+      "size": [
+        420,
+        150
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ResolutionSelector"
+      },
+      "widgets_values": [
+        "1:1 (Square)",
+        0.4,
+        32
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 8,
+      "type": "MiniMaxH3ChainVideoNative",
+      "pos": [
+        480,
+        0
+      ],
+      "size": [
+        560,
+        710
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "prompt_1",
+          "localized_name": "prompts.prompt_1",
+          "name": "prompts.prompt_1",
+          "type": "STRING",
+          "link": 18
+        },
+        {
+          "label": "prompt_2",
+          "localized_name": "prompts.prompt_2",
+          "name": "prompts.prompt_2",
+          "type": "STRING",
+          "link": 19,
+          "shape": 7
+        },
+        {
+          "label": "prompt_3",
+          "localized_name": "prompts.prompt_3",
+          "name": "prompts.prompt_3",
+          "type": "STRING",
+          "link": 20,
+          "shape": 7
+        },
+        {
+          "label": "prompt_4",
+          "localized_name": "prompts.prompt_4",
+          "name": "prompts.prompt_4",
+          "type": "STRING",
+          "link": 21,
+          "shape": 7
+        },
+        {
+          "label": "prompt_5",
+          "localized_name": "prompts.prompt_5",
+          "name": "prompts.prompt_5",
+          "shape": 7,
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "name": "style",
+          "shape": 7,
+          "type": "STRING",
+          "link": 16
+        },
+        {
+          "name": "start_image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 6
+        },
+        {
+          "name": "reference_image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 7
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VIDEO",
+          "type": "VIDEO",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MiniMaxH3ChainVideoNative"
+      },
+      "widgets_values": [
+        "MiniMax-H3",
+        0,
+        5,
+        640,
+        640,
+        42,
+        "fixed",
+        true,
+        0,
+        "target",
+        0,
+        8,
+        1,
+        50,
+        1,
+        false,
+        0,
+        0,
+        false,
+        0,
+        false
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 9,
+      "type": "MarkdownNote",
+      "pos": [
+        1100,
+        0
+      ],
+      "size": [
+        520,
+        240
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "Note: MiniMax H3 chain",
+      "properties": {},
+      "widgets_values": [
+        "## MiniMax H3 chain — Apple Silicon (h3.c)\nGeneration runs in a persistent native [h3.c](https://github.com/antirez/h3.c) worker that keeps the model and its caches loaded across clips and runs. Build it once: `make -C custom_nodes/ComfyUI-MiniMax-H3-Native-Chain/native H3_DIR=/path/to/h3.c`.\n\n`model_dir` is the MiniMax-H3 snapshot (with `FL2VA/`), absolute or relative to `models/`.\n\n- **prompts**: connect one text node per clip; a new `prompt_N` slot appears as you connect one\n- **num_clips**: 0 = one clip per prompt\n- **style** (optional, connect a text node): appended to every prompt\n- **denoise_steps**: actual h3.c denoising passes (8 by default)\n- **color_match** 0.5–1.0 keeps skin tone stable across clips\n\n**Save Video** saves the merged video (set its name with `filename_prefix`). Generated clips are cached in `output/h3_cache/`. Change one prompt and run again: only that clip and the following ones are regenerated."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 16,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -460,
+        800
+      ],
+      "size": [
+        420,
+        140
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            16
+          ]
+        }
+      ],
+      "title": "Style",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "Same character, same hand-drawn art style, same pink dress and same sunny hill background in every shot.\nAudio: cheerful voice, light breeze, birds singing, no music. No subtitles, no on-screen text."
+      ],
+      "color": "#233",
+      "bgcolor": "#355"
+    },
+    {
+      "id": 17,
+      "type": "SaveVideo",
+      "pos": [
+        1100,
+        290
+      ],
+      "size": [
+        520,
+        580
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SaveVideo"
+      },
+      "widgets_values": [
+        "video/h3",
+        "auto",
+        "auto",
+        "auto"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 18,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -460,
+        0
+      ],
+      "size": [
+        420,
+        140
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "title": "Clip 1",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "[0-2s] The girl waves at the camera with both arms and smiles. [Static shot].\n[2-5s] She says happily: \"Hi! Come with me!\" and turns toward the hill. [Slow push in]."
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 19,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -460,
+        200
+      ],
+      "size": [
+        420,
+        140
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            19
+          ]
+        }
+      ],
+      "title": "Clip 2",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "[0-3s] She skips across the green hill, her big ears bouncing with every step. [Tracking shot].\n[3-5s] She stops and looks up at the clouds. [Static shot]."
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 20,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -460,
+        400
+      ],
+      "size": [
+        420,
+        140
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "title": "Clip 3",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "[0-2s] A small butterfly lands on her nose and she giggles. [Close-up].\n[2-5s] She says softly: \"Hello, little friend.\" as the butterfly flies away. [Slow pull out]."
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 21,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -460,
+        600
+      ],
+      "size": [
+        420,
+        140
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "title": "Clip 4",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "[0-3s] She sits down on the grass and waves goodbye: \"See you next time!\" [Static shot].\n[3-5s] The camera slowly rises toward the blue sky. [Crane up]."
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    }
+  ],
+  "links": [
+    [
+      6,
+      6,
+      0,
+      8,
+      6,
+      "IMAGE"
+    ],
+    [
+      7,
+      7,
+      0,
+      8,
+      8,
+      "INT"
+    ],
+    [
+      8,
+      7,
+      1,
+      8,
+      9,
+      "INT"
+    ],
+    [
+      16,
+      16,
+      0,
+      8,
+      5,
+      "STRING"
+    ],
+    [
+      17,
+      8,
+      0,
+      17,
+      0,
+      "VIDEO"
+    ],
+    [
+      18,
+      18,
+      0,
+      8,
+      0,
+      "STRING"
+    ],
+    [
+      19,
+      19,
+      0,
+      8,
+      1,
+      "STRING"
+    ],
+    [
+      20,
+      20,
+      0,
+      8,
+      2,
+      "STRING"
+    ],
+    [
+      21,
+      21,
+      0,
+      8,
+      3,
+      "STRING"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8,
+      "offset": [
+        80,
+        70
+      ]
+    },
+    "frontendVersion": "1.55.17"
+  },
+  "extensions": {
+    "seed_widgets": {
+      "8": 7
+    }
+  },
+  "version": 0.4,
+  "seed_widgets": {
+    "8": 7
+  }
+}

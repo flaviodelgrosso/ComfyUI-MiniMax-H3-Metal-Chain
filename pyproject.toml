@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-minimax-h3-native-chain"
+description = "Chain MiniMax H3 clips into one long video on Apple Silicon with the native h3.c Metal engine: an optional start image or text-to-video first clip, then each clip starts from the last frame of the previous one, with one prompt per clip, a disk cache to regenerate single clips, anti-drift re-anchoring and a merged output video."
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = []
+classifiers = ["Operating System :: MacOS", "Environment :: GPU :: Apple Metal"]
+
+[project.urls]
+Repository = "https://github.com/flaviodelgrosso/ComfyUI-MiniMax-H3-Native-Chain"
+
+[tool.comfy]
+PublisherId = "flaviodelgrosso"
+DisplayName = "MiniMax H3 Native Chain"
+Icon = ""

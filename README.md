@@ -33,7 +33,15 @@ ComfyUI node (h3_chain_node.py)  ──JSON lines over stdin/stdout──▶  h3
 hf download MiniMaxAI/MiniMax-H3 --include "FL2VA/*" --local-dir models/MiniMax-H3
 ```
 
-h3.c needs `FL2VA/transformer`, `FL2VA/tokenizer`, `FL2VA/text_encoder`, `FL2VA/video_vae/source` and `FL2VA/audio_vae`; the worker reports exactly what is missing. The optional `voice` input also needs the Ref2VA checkpoint: `hf download MiniMaxAI/MiniMax-H3 --include "Ref2VA/*" --local-dir models/MiniMax-H3`. A running worker only sees `Ref2VA/` after a restart (`unload_after`, or restart ComfyUI).
+h3.c needs `FL2VA/transformer`, `FL2VA/tokenizer`, `FL2VA/text_encoder`, `FL2VA/video_vae/source` and `FL2VA/audio_vae`; the worker reports exactly what is missing.
+
+The optional `voice` input also needs the Ref2VA checkpoint (its transformer alone is about 62 GiB), in the same folder:
+
+```bash
+hf download MiniMaxAI/MiniMax-H3 --include "Ref2VA/*" --local-dir models/MiniMax-H3
+```
+
+h3.c uses `Ref2VA/transformer`, `Ref2VA/tokenizer`, `Ref2VA/text_encoder`, `Ref2VA/video_vae/source` and `Ref2VA/audio_vae`. The worker looks for `Ref2VA/` when it loads the model: after downloading it, run once with `unload_after` or restart ComfyUI.
 
 ## Installation
 
@@ -122,7 +130,7 @@ Each clip starts from a generated, VAE-decoded frame, so colors, contrast and sk
 
 ## Voice
 
-Connect a Load Audio node to `voice` to make the person speak with that voice. h3.c only takes reference audio through its Ref2VA checkpoint, which has no first/last-frame anchors, so every clip is generated with its start frame as `<Picture 1>` and the voice as `<Audio 1>` (h3.c `--ref-image` + `--ref-audio`):
+Connect a Load Audio node to `voice` to make the person speak with that voice. This needs the Ref2VA checkpoint, see [Requirements](#requirements). h3.c only takes reference audio through Ref2VA, which has no first/last-frame anchors, so every clip is generated with its start frame as `<Picture 1>` and the voice as `<Audio 1>` (h3.c `--ref-image` + `--ref-audio`):
 
 - Name the references in the prompts, e.g. in `style`: `The person in <Picture 1> speaks with the voice from <Audio 1>.`
 - The start frame is a reference, not frame 0, so seams are soft cuts and no frame is dropped in the merge.

@@ -33,7 +33,7 @@ ComfyUI node (h3_chain_node.py)  ──JSON lines over stdin/stdout──▶  h3
 hf download MiniMaxAI/MiniMax-H3 --include "FL2VA/*" --local-dir models/MiniMax-H3
 ```
 
-h3.c needs `FL2VA/transformer`, `FL2VA/tokenizer`, `FL2VA/text_encoder`, `FL2VA/video_vae/source` and `FL2VA/audio_vae`; the worker reports exactly what is missing.
+h3.c needs `FL2VA/transformer`, `FL2VA/tokenizer`, `FL2VA/text_encoder`, `FL2VA/video_vae/source` and `FL2VA/audio_vae`; the worker reports exactly what is missing. The optional `voice` input also needs the Ref2VA checkpoint: `hf download MiniMaxAI/MiniMax-H3 --include "Ref2VA/*" --local-dir models/MiniMax-H3`. A running worker only sees `Ref2VA/` after a restart (`unload_after`, or restart ComfyUI).
 
 ## Installation
 
@@ -83,6 +83,7 @@ ComfyUI's progress bar counts denoising steps over the whole chain: with 2 clips
 | `width`, `height` | Output canvas, multiples of 32, at most 768×1344 pixels. 512–768 px squares are h3.c's validated sizes |
 | `seed`, `vary_seed` | Base seed; with `vary_seed` each clip uses `seed + clip index` |
 | `start_image` | Optional first frame of clip 1. Leave empty to generate clip 1 from text only |
+| `voice` | Optional voice sample (`AUDIO`, at least 2 s; only the first 15 s are used) for the speech of every clip, see below |
 | `reanchor_every`, `reanchor_mode`, `reference_image` | Anti-drift, see below |
 | `color_match` | `0`–`1`: before each chained clip, match the hue and saturation of its start frame to the reference image (Lab a/b channels; brightness and contrast are not changed). `0` = off |
 | `denoise_steps` | Actual h3.c denoising passes per clip (`h3 --steps`, default `8`): 8 means 8 model passes |
@@ -119,6 +120,16 @@ Over many clips, faces and details slowly drift. With `reanchor_every = K`:
 
 Each clip starts from a generated, VAE-decoded frame, so colors, contrast and skin texture degrade a little at every hop. `color_match` (try `0.5`–`1.0`) and `reanchor_every = 2` with `target` counter this.
 
+## Voice
+
+Connect a Load Audio node to `voice` to make the person speak with that voice. h3.c only takes reference audio through its Ref2VA checkpoint, which has no first/last-frame anchors, so every clip is generated with its start frame as `<Picture 1>` and the voice as `<Audio 1>` (h3.c `--ref-image` + `--ref-audio`):
+
+- Name the references in the prompts, e.g. in `style`: `The person in <Picture 1> speaks with the voice from <Audio 1>.`
+- The start frame is a reference, not frame 0, so seams are soft cuts and no frame is dropped in the merge.
+- Clip 1 needs an image: `start_image`, or `reference_image` without a start image.
+- h3.c accepts at most 15 s of reference audio: a longer sample is cut to its first 15 s, with a warning in the log. Pick a clean single-speaker sample.
+- There is no last-frame anchor, so `reanchor_mode` `target` behaves like `replace`.
+
 ## Merge
 
 Clip 1 is kept whole. Every following clip, except `replace` re-anchored ones, drops its first frame and the matching 1/24 s of audio, because that frame duplicates the previous clip's last frame. The clips are concatenated by ComfyUI's video API into the `VIDEO` output at 24 fps with the generated audio.
@@ -138,9 +149,11 @@ Clip 1 is kept whole. Every following clip, except `replace` re-anchored ones, d
 ```json
 {"command":"load","model_dir":"/path/to/MiniMax-H3"}
 {"command":"generate","prompt":"…","width":640,"height":640,"frames":124,"steps":8,"seed":42,
- "first_frame":"/run/clip_001_last.png","last_frame":null,"output":"/run/clip_002.partial.mp4",
+ "first_frame":"/run/clip_001_last.png","last_frame":null,"ref_image":null,"ref_audio":null,"output":"/run/clip_002.partial.mp4",
  "last_frame_output":"/run/clip_002_last.partial.png","reuse":1,"layers":50,"core_reuse":1,
  "token_reduction":false,"render_width":0,"render_height":0,"ssd_streaming":false}
 ```
+
+`ref_image` and `ref_audio` are passed to h3.c as Ref2VA references, in that order, and cannot be combined with `first_frame`/`last_frame`.
 
 Events: `ready`, `loaded`, `progress` (`phase`, `completed`, `total`; the worker adds `video VAE decode` and `last frame`, which h3.c does not report itself), `complete` (output paths, frames, seconds, per-phase `timings`, h3 cache state, peak memory footprint) and `error` (h3.c's `h3_last_error()` message, `cancelled`).

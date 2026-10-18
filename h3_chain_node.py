@@ -13,6 +13,7 @@ import logging
 import os
 import threading
 import time
+import wave
 from contextlib import suppress
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from .h3_backend import H3Cancelled, get_worker, shutdown_worker
 
 FPS = 24  # MiniMax H3 output frame rate
 BACKEND = "h3.c"  # part of every clip cache key
+VOICE_SECONDS = 15  # h3.c's limit for reference audio
 
 
 def tensor_hash(image):
@@ -46,6 +48,24 @@ def load_png(path):
     # Same conversion as LoadImage. Chaining always goes through the saved PNG so the next
     # clip sees identical input whether the previous clip was just generated or cached.
     return torch.from_numpy(np.array(Image.open(path).convert("RGB")).astype(np.float32) / 255.0)[None]
+
+
+def save_voice(audio, cache_dir):
+    """Write the first waveform of an AUDIO input as 16-bit WAV under its hash; h3.c decodes it with FFmpeg.
+    h3.c rejects reference audio longer than 15 s, so longer samples keep only their first 15 s."""
+    sample_rate = audio["sample_rate"]
+    waveform = audio["waveform"][0]
+    if waveform.shape[-1] > VOICE_SECONDS * sample_rate:
+        logging.warning(f"MiniMax chain: voice is {waveform.shape[-1] / sample_rate:.1f} s, using its first {VOICE_SECONDS} s (h3.c limit).")
+        waveform = waveform[..., :VOICE_SECONDS * sample_rate]
+    pcm = (waveform.clamp(-1, 1) * 32767).round().to(torch.int16).movedim(0, -1).contiguous().cpu().numpy()
+    path = os.path.join(cache_dir, hashlib.sha256(pcm.tobytes() + str(sample_rate).encode()).hexdigest() + ".wav")
+    with wave.open(path, "wb") as f:
+        f.setnchannels(pcm.shape[1])
+        f.setsampwidth(2)
+        f.setframerate(sample_rate)
+        f.writeframes(pcm.tobytes())
+    return path
 
 
 def match_chroma(image, reference, strength):
@@ -184,6 +204,10 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
                 io.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True),
                 io.Boolean.Input("vary_seed", default=True, tooltip="Use seed + clip index for each clip."),
                 io.Image.Input("start_image", optional=True, tooltip="First frame of clip 1. Leave empty to generate clip 1 from text only."),
+                io.Audio.Input("voice", optional=True,
+                               tooltip="Voice sample (at least 2 s, longer ones are cut to 15 s) for the speech of every clip. Uses the Ref2VA checkpoint: each clip gets its start "
+                                       "frame as <Picture 1> and this sample as <Audio 1> instead of a first-frame anchor, so seams are soft cuts. "
+                                       "Needs start_image or reference_image."),
                 io.Image.Input("reference_image", optional=True,
                                tooltip="Anti-drift reference (default: start_image, or clip 1's last frame without a start image)."),
                 io.Int.Input("reanchor_every", default=0, min=0, max=10000,
@@ -221,11 +245,11 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
     @classmethod
     def execute(cls, model_dir, prompts: io.Autogrow.Type, num_clips, duration, width, height, seed, vary_seed, reanchor_every, reanchor_mode,
                 color_match, denoise_steps, reuse, layers, core_reuse, token_reduction, render_width, render_height, ssd_streaming,
-                redo_from, unload_after, style="", start_image=None, reference_image=None) -> io.NodeOutput:
+                redo_from, unload_after, style="", start_image=None, reference_image=None, voice=None) -> io.NodeOutput:
         try:
             return cls.run_chain(model_dir, prompts, style, num_clips, duration, width, height, seed, vary_seed, reanchor_every,
                                  reanchor_mode, color_match, denoise_steps, reuse, layers, core_reuse, token_reduction, render_width,
-                                 render_height, ssd_streaming, redo_from, start_image, reference_image)
+                                 render_height, ssd_streaming, redo_from, start_image, reference_image, voice)
         finally:
             if unload_after:
                 shutdown_worker()
@@ -233,7 +257,7 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
     @classmethod
     def run_chain(cls, model_dir, prompts, style, num_clips, duration, width, height, seed, vary_seed, reanchor_every, reanchor_mode,
                   color_match, steps, reuse, layers, core_reuse, token_reduction, render_width, render_height, ssd_streaming,
-                  redo_from, start_image, reference_image):
+                  redo_from, start_image, reference_image, voice):
         prompt_list = [prompts[name].strip() for name in sorted(prompts, key=lambda name: int(name.removeprefix("prompt_")))
                        if prompts[name] and prompts[name].strip()]
         if not prompt_list:
@@ -268,6 +292,16 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
             save_png(reference, reference_file)
         else:
             reference, reference_file = prev_last, prev_last_file
+        voice_file = None
+        if voice is not None:
+            if reference is None:
+                raise ValueError("voice needs start_image or reference_image: h3.c Ref2VA audio references must come with an image")
+            voice_file = save_voice(voice, cache_dir)
+            if prev_last is None:
+                prev_last, prev_last_file = reference, reference_file
+            if reanchor_every and reanchor_mode == "target":
+                logging.warning("MiniMax chain: with a voice there are no last-frame anchors, reanchor_mode target behaves like replace.")
+                reanchor_mode = "replace"
 
         videos = []
         for i in range(1, n + 1):
@@ -279,6 +313,8 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
             matched = color_match if i > 1 and not reanchor else 0.0
             key_parts = [BACKEND, prompt, clip_seed, width, height, length, generation,
                          tensor_hash(first) if first is not None else None, tensor_hash(reference) if target else None]
+            if voice_file:
+                key_parts.append(["voice", os.path.basename(voice_file)])
             if matched:
                 key_parts.append(["chroma", matched])
             key = hashlib.sha256(json.dumps(key_parts).encode()).hexdigest()
@@ -308,7 +344,8 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
                         progress.update("load model", 1, 1)
                     result = worker.generate({
                         "prompt": prompt, "width": width, "height": height, "frames": length, "seed": clip_seed,
-                        "first_frame": first_file, "last_frame": reference_file if target else None,
+                        "first_frame": None if voice_file else first_file, "last_frame": reference_file if target else None,
+                        "ref_image": first_file if voice_file else None, "ref_audio": voice_file,
                         "output": partial_video, "last_frame_output": partial_last, "ssd_streaming": ssd_streaming, **generation,
                     }, on_progress)
                 except BaseException as e:
@@ -327,7 +364,7 @@ class MiniMaxH3ChainVideo(io.ComfyNode):
                 progress.end_clip()
 
             clip_video = InputImpl.VideoFromFile(video_path)
-            if i > 1 and not reanchor:
+            if i > 1 and not reanchor and not voice_file:
                 # Drop the first frame (and 1/24 s of audio): it duplicates the previous clip's last frame.
                 clip_video = clip_video.as_trimmed(1 / FPS, 0, strict_duration=False)
             videos.append(clip_video)

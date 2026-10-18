@@ -431,6 +431,13 @@ static void generate(request *r) {
     params.render_width = int_field(r, "render_width", params.render_width);
     params.render_height = int_field(r, "render_height", params.render_height);
     params.ssd_streaming = int_field(r, "ssd_streaming", params.ssd_streaming);
+    /* Ref2VA references, in <Picture 1>, <Audio 1> order. */
+    h3_reference references[2];
+    const char *ref_image = str_field(r, "ref_image");
+    const char *ref_audio = str_field(r, "ref_audio");
+    if (ref_image) references[params.reference_count++] = (h3_reference){H3_REFERENCE_IMAGE, ref_image, NULL, 0};
+    if (ref_audio) references[params.reference_count++] = (h3_reference){H3_REFERENCE_AUDIO, ref_audio, NULL, 0};
+    if (params.reference_count) params.references = references;
     params.on_frame = on_frame;
     params.on_progress = on_progress;
     params.callback_opaque = &j;
@@ -441,11 +448,12 @@ static void generate(request *r) {
 
     cancel_requested = 0;
     generate_count++;
-    fprintf(stderr, "h3-worker: h3_generate #%d %dx%d frames=%d steps=%d seed=%llu first=%s last=%s\n",
+    fprintf(stderr, "h3-worker: h3_generate #%d %dx%d frames=%d steps=%d seed=%llu first=%s last=%s ref_image=%s ref_audio=%s\n",
             generate_count, params.width, params.height, params.frames, params.steps,
             (unsigned long long)params.seed,
             params.first_frame ? params.first_frame : "-",
-            params.last_frame ? params.last_frame : "-");
+            params.last_frame ? params.last_frame : "-",
+            ref_image ? ref_image : "-", ref_audio ? ref_audio : "-");
     double start = now();
     j.last_event = start;
     h3_result *result = h3_generate(ctx, prompt ? prompt : "", &params);

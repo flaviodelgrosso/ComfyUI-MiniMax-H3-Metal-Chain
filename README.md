@@ -41,10 +41,10 @@ h3.c needs `FL2VA/transformer`, `FL2VA/tokenizer`, `FL2VA/text_encoder`, `FL2VA/
 cd ComfyUI/custom_nodes
 git clone https://github.com/flaviodelgrosso/ComfyUI-MiniMax-H3-Native-Chain.git
 git clone https://github.com/antirez/h3.c.git ~/h3.c
-make -C ComfyUI-MiniMax-H3-Native-Chain/native H3_DIR=~/h3.c
+make -C ComfyUI-MiniMax-H3-Native-Chain H3_DIR=~/h3.c
 ```
 
-`make` builds `libh3.a` in the h3.c checkout with h3.c's own Makefile, then links `native/h3_comfy_worker` against it. The worker remembers the checkout path (h3.c compiles `h3_shaders.metal` from it at runtime), so keep the checkout where it is, and rerun the same `make` after updating h3.c. Paths containing spaces are not supported by the Makefile.
+`make` builds `libh3.a` in the h3.c checkout with h3.c's own Makefile, then links `h3_comfy_worker` against it. The worker remembers the checkout path (h3.c compiles `h3_shaders.metal` from it at runtime), so keep the checkout where it is, and rerun the same `make` after updating h3.c. Paths containing spaces are not supported by the Makefile.
 
 Restart ComfyUI. The node appears as **MiniMax H3 Chain Video (h3.c)** in the `video/minimax` category.
 
@@ -144,7 +144,7 @@ Clip 1 is kept whole. Every following clip, except `replace` re-anchored ones, d
 
 ## Worker protocol
 
-`native/h3_comfy_worker` reads one JSON object per line on stdin and writes one JSON event per line on stdout; diagnostics go to stderr. `SIGUSR1` cancels the running generation.
+`h3_comfy_worker` reads one JSON object per line on stdin and writes one JSON event per line on stdout; diagnostics go to stderr. `SIGUSR1` cancels the running generation.
 
 ```json
 {"command":"load","model_dir":"/path/to/MiniMax-H3"}

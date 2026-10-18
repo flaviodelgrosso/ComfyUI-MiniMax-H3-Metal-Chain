@@ -1,11 +1,11 @@
 # Builds the persistent ComfyUI worker against a local h3.c checkout:
-#   make -C native H3_DIR=/path/to/h3.c
+#   make H3_DIR=/path/to/h3.c
 # libh3.a is (re)built in that checkout by h3.c's own Makefile.
 ifndef H3_DIR
 $(error set H3_DIR to your h3.c checkout, e.g. make H3_DIR=$$HOME/h3.c)
 endif
 
-# zsh passes H3_DIR=~/... through unexpanded, so expand ~ here. Relative paths are relative to native/.
+# zsh passes H3_DIR=~/... through unexpanded, so expand ~ here. Relative paths are relative to this folder.
 H3 := $(abspath $(patsubst ~%,$(HOME)%,$(H3_DIR)))
 ifeq ($(wildcard $(H3)/h3.h),)
 $(error no h3.c checkout at $(H3): H3_DIR must point to the folder containing h3.h)

@@ -1,6 +1,6 @@
 """Persistent h3.c worker process and its JSONL protocol.
 
-The worker (native/h3_comfy_worker) keeps one h3_ctx with h3.c's session cache
+The worker (h3_comfy_worker) keeps one h3_ctx with h3.c's session cache
 enabled, so the prepared model state survives between clips and between runs.
 It lives in its own process: a native crash fails the node, not ComfyUI.
 """
@@ -17,8 +17,8 @@ import sys
 import threading
 from collections import deque
 
-NATIVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "native")
-WORKER = os.path.join(NATIVE_DIR, "h3_comfy_worker")
+NODE_DIR = os.path.dirname(os.path.abspath(__file__))
+WORKER = os.path.join(NODE_DIR, "h3_comfy_worker")
 
 
 class H3Error(RuntimeError):
@@ -33,7 +33,7 @@ def check_environment():
     if sys.platform != "darwin" or platform.machine() != "arm64":
         raise H3Error("The h3.c backend needs macOS on Apple Silicon (Metal).")
     if not os.access(WORKER, os.X_OK):
-        raise H3Error(f"The h3 worker is not built. Run: make -C '{NATIVE_DIR}' H3_DIR=/path/to/h3.c")
+        raise H3Error(f"The h3 worker is not built. Run: make -C '{NODE_DIR}' H3_DIR=/path/to/h3.c")
     for tool, override in (("ffmpeg", "H3_FFMPEG"), ("ffprobe", "H3_FFPROBE")):
         if not shutil.which(os.environ.get(override) or tool):
             raise H3Error(f"h3.c needs {tool} on PATH for MP4 output and image anchors "
